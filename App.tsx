@@ -6,6 +6,7 @@ import { auth } from "./src/config/config/firebase";
 import LoginScreen from "./src/config/screens/LoginScreen";
 import SignUpScreen from "./src/config/screens/SignUpScreen";
 import HomeScreen from "./src/config/screens/HomeScreen";
+import RecordingScreen from "./src/config/screens/RecordingScreen"; // Importa la nueva pantalla
 
 const Stack = createStackNavigator();
 
@@ -24,13 +25,24 @@ const App: React.FC = () => {
     <NavigationContainer>
       <Stack.Navigator>
         {user ? (
-          <Stack.Screen
-            name="Home"
-            component={HomeScreen}
-            options={{ title: "Inicio" }}
-          />
+          <>
+            {/* Pantalla principal */}
+            <Stack.Screen
+              name="Home"
+              component={HomeScreen}
+              options={{ title: "Inicio" }}
+            />
+
+            {/* Pantalla de grabación */}
+            <Stack.Screen
+              name="RecordingScreen"
+              component={RecordingScreen}
+              options={{ title: "Grabación de Audio" }}
+            />
+          </>
         ) : (
           <>
+            {/* Pantallas de autenticación */}
             <Stack.Screen
               name="Login"
               component={LoginScreen}

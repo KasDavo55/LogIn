@@ -12,11 +12,16 @@ import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { storage, auth } from "../config/firebase";
 import { useNavigation } from "@react-navigation/native";
 import * as ImagePicker from "expo-image-picker";
+import { Audio } from "expo-av";
+
 
 const HomeScreen: React.FC = () => {
   const navigation = useNavigation();
   const [imageUri, setImageUri] = useState<string | null>(null);
+  const [audioUri, setAudioUri] = useState<string | null>(null);
+  const [recording, setRecording] = useState<Audio.Recording | null>(null);
 
+  // Cerrar sesión
   const handleLogout = async () => {
     try {
       await signOut(auth);
@@ -27,6 +32,7 @@ const HomeScreen: React.FC = () => {
     }
   };
 
+  // Subir imagen desde la galería
   const openGallery = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       allowsEditing: true,
@@ -43,6 +49,7 @@ const HomeScreen: React.FC = () => {
     }
   };
 
+  // Abrir la cámara y tomar una foto
   const openCamera = async () => {
     const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
 
@@ -69,6 +76,7 @@ const HomeScreen: React.FC = () => {
     }
   };
 
+  // Subir imagen a Firebase Storage
   const uploadImage = async (uri: string) => {
     try {
       const response = await fetch(uri);
@@ -97,9 +105,13 @@ const HomeScreen: React.FC = () => {
           style={{ width: 300, height: 300, marginBottom: 20 }}
         />
       )}
+      {audioUri && <Text style={{ marginBottom: 20 }}>Audio grabado y subido</Text>}
+
       <Button title="Subir Imagen de Galería" onPress={openGallery} color="#841584" />
       <View style={{ marginVertical: 10 }} />
       <Button title="Abrir Cámara" onPress={openCamera} color="#FF6347" />
+      <View style={{ marginVertical: 10 }} />
+      <Button title="Ir a Grabar Audio" onPress={() => navigation.navigate("RecordingScreen" as never)} color="#FF4136" />
       <View style={{ marginVertical: 10 }} />
       <Button title="Cerrar Sesión" onPress={handleLogout} color="red" />
     </View>
