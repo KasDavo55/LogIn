@@ -6,8 +6,13 @@ import {
   FlatList,
   TouchableOpacity,
   Dimensions,
+  Alert,
 } from "react-native";
 import MapView, { Marker } from "react-native-maps";
+import MapViewDirections from "react-native-maps-directions";
+import * as Location from "expo-location";
+
+const GOOGLE_API_KEY = "AIzaSyD7vUAMpM0jDN8LVyqNO3RhwLw7qBxhcNw"; // Reemplaza con tu clave de Google API
 
 const PlacesScreen: React.FC = () => {
   const [selectedPlace, setSelectedPlace] = useState<{
@@ -16,8 +21,11 @@ const PlacesScreen: React.FC = () => {
     latitude: number;
     longitude: number;
   } | null>(null);
+  const [userLocation, setUserLocation] = useState<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
 
-  // Lista de lugares
   const places = [
     {
       id: "1",
@@ -56,6 +64,38 @@ const PlacesScreen: React.FC = () => {
     },
   ];
 
+  // Obtener la ubicación actual del usuario
+  const toggleUserLocation = async () => {
+    if (userLocation) {
+      // Si ya está activada la ubicación, desactivarla
+      setUserLocation(null);
+      Alert.alert("Ubicación desactivada", "Ya no se mostrarán rutas.");
+    } else {
+      // Si no está activada, activarla
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== "granted") {
+          Alert.alert(
+            "Permiso denegado",
+            "Se requiere acceso a tu ubicación para calcular las rutas."
+          );
+          return;
+        }
+
+        const location = await Location.getCurrentPositionAsync({});
+        setUserLocation({
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
+        });
+
+        Alert.alert("Ubicación activada", "Tu ubicación se ha activado.");
+      } catch (error) {
+        console.error("Error al obtener la ubicación:", error);
+        Alert.alert("Error", "No se pudo obtener tu ubicación.");
+      }
+    }
+  };
+
   return (
     <View style={styles.container}>
       {selectedPlace ? (
@@ -69,6 +109,7 @@ const PlacesScreen: React.FC = () => {
               longitudeDelta: 0.05,
             }}
           >
+            {/* Muestra el marcador del lugar seleccionado */}
             <Marker
               coordinate={{
                 latitude: selectedPlace.latitude,
@@ -77,7 +118,35 @@ const PlacesScreen: React.FC = () => {
               title={selectedPlace.title}
               description={selectedPlace.description}
             />
+
+            {/* Si el usuario ya activó su ubicación, muestra la ruta */}
+            {userLocation && (
+              <>
+                <Marker
+                  coordinate={{
+                    latitude: userLocation.latitude,
+                    longitude: userLocation.longitude,
+                  }}
+                  title="Mi Ubicación"
+                />
+                <MapViewDirections
+                  origin={userLocation}
+                  destination={{
+                    latitude: selectedPlace.latitude,
+                    longitude: selectedPlace.longitude,
+                  }}
+                  apikey={GOOGLE_API_KEY}
+                  strokeWidth={5}
+                  strokeColor="blue"
+                  onError={(errorMessage) => {
+                    console.error("Error al calcular la ruta:", errorMessage);
+                    Alert.alert("Error", "No se pudo calcular la ruta.");
+                  }}
+                />
+              </>
+            )}
           </MapView>
+
           <TouchableOpacity
             style={styles.backButton}
             onPress={() => setSelectedPlace(null)}
@@ -86,19 +155,32 @@ const PlacesScreen: React.FC = () => {
           </TouchableOpacity>
         </View>
       ) : (
-        <FlatList
-          data={places}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={styles.placeItem}
-              onPress={() => setSelectedPlace(item)}
-            >
-              <Text style={styles.placeTitle}>{item.title}</Text>
-              <Text style={styles.placeDescription}>{item.description}</Text>
-            </TouchableOpacity>
-          )}
-        />
+        <>
+          <FlatList
+            data={places}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={styles.placeItem}
+                onPress={() => setSelectedPlace(item)}
+              >
+                <Text style={styles.placeTitle}>{item.title}</Text>
+                <Text style={styles.placeDescription}>{item.description}</Text>
+              </TouchableOpacity>
+            )}
+          />
+          <TouchableOpacity
+            style={[
+              styles.locationButton,
+              userLocation ? styles.locationButtonActive : styles.locationButtonInactive,
+            ]}
+            onPress={toggleUserLocation}
+          >
+            <Text style={styles.locationButtonText}>
+              {userLocation ? "Desactivar mi ubicación" : "Activar mi ubicación"}
+            </Text>
+          </TouchableOpacity>
+        </>
       )}
     </View>
   );
@@ -150,6 +232,26 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   backButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  locationButton: {
+    position: "absolute",
+    bottom: 20,
+    left: 20,
+    right: 20,
+    padding: 15,
+    borderRadius: 10,
+    alignItems: "center",
+  },
+  locationButtonActive: {
+    backgroundColor: "#d9534f", // Rojo para "Desactivar"
+  },
+  locationButtonInactive: {
+    backgroundColor: "#5cb85c", // Verde para "Activar"
+  },
+  locationButtonText: {
     color: "#fff",
     fontSize: 16,
     fontWeight: "bold",
