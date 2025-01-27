@@ -6,8 +6,9 @@ import { auth } from "./src/config/config/firebase";
 import LoginScreen from "./src/config/screens/LoginScreen";
 import SignUpScreen from "./src/config/screens/SignUpScreen";
 import HomeScreen from "./src/config/screens/HomeScreen";
-import RecordingScreen from "./src/config/screens/RecordingScreen"; 
+import RecordingScreen from "./src/config/screens/RecordingScreen";
 import PlacesScreen from "./src/config/screens/PlacesScreen";
+import AddPlaceScreen from "./src/config/screens/AddPlaceScreen"; // Nueva pantalla
 
 const Stack = createStackNavigator();
 
@@ -40,9 +41,20 @@ const App: React.FC = () => {
               component={RecordingScreen}
               options={{ title: "Grabación de Audio" }}
             />
-            <Stack.Screen name="PlacesScreen" component={PlacesScreen} 
-            options={{ title: "Lugares" }} />
-            
+
+            {/* Pantalla de lugares */}
+            <Stack.Screen
+              name="PlacesScreen"
+              component={PlacesScreen}
+              options={{ title: "Lugares" }}
+            />
+
+            {/* Pantalla para agregar un nuevo lugar */}
+            <Stack.Screen
+              name="AddPlaceScreen"
+              component={AddPlaceScreen}
+              options={{ title: "Agregar Nuevo Lugar" }}
+            />
           </>
         ) : (
           <>

@@ -115,6 +115,8 @@ const HomeScreen: React.FC = () => {
       <View style={{ marginVertical: 10 }} />
       <Button title="Lugares" onPress={() => navigation.navigate("PlacesScreen" as never)} color="#841584" />
       <View style={{ marginVertical: 10 }} />
+      <Button title="Agregar Nuevo Lugar" onPress={() => navigation.navigate("AddPlaceScreen" as never)} color="#841584" />
+      <View style={{ marginVertical: 10 }} />
       <Button title="Cerrar Sesión" onPress={handleLogout} color="red" />
     </View>
   );

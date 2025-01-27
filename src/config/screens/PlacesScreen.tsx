@@ -1,22 +1,31 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
   StyleSheet,
   FlatList,
   TouchableOpacity,
-  Dimensions,
   Alert,
 } from "react-native";
 import MapView, { Marker } from "react-native-maps";
 import MapViewDirections from "react-native-maps-directions";
 import * as Location from "expo-location";
+import { getDatabase, ref, onValue } from "firebase/database";
 
 const GOOGLE_API_KEY = "AIzaSyD7vUAMpM0jDN8LVyqNO3RhwLw7qBxhcNw"; // Reemplaza con tu clave de Google API
 
 const PlacesScreen: React.FC = () => {
+  const [places, setPlaces] = useState<
+    {
+      id: string;
+      name: string;
+      description: string;
+      latitude: number;
+      longitude: number;
+    }[]
+  >([]);
   const [selectedPlace, setSelectedPlace] = useState<{
-    title: string;
+    name: string;
     description: string;
     latitude: number;
     longitude: number;
@@ -25,73 +34,63 @@ const PlacesScreen: React.FC = () => {
     latitude: number;
     longitude: number;
   } | null>(null);
+  const [isLocationActive, setIsLocationActive] = useState(false);
 
-  const places = [
-    {
-      id: "1",
-      title: "Michael's Restaurant",
-      description: "Sector El Bosque",
-      latitude: -0.15970223092655936,
-      longitude: -78.49644625061103,
-    },
-    {
-      id: "2",
-      title: "Rock +",
-      description: "Sector plataforma Gubernamental Norte",
-      latitude: -0.17495115138316805,
-      longitude: -78.483517089627,
-    },
-    {
-      id: "3",
-      title: "Pennyroyal Burger",
-      description: "Sector Pampite, Cumbaya",
-      latitude: -0.19539048045767224,
-      longitude: -78.43478692031205,
-    },
-    {
-      id: "4",
-      title: "Chios Burger",
-      description: "Sector Real audiencia",
-      latitude: -0.13309749491117678,
-      longitude: -78.48670697613412,
-    },
-    {
-      id: "5",
-      title: "Chub's Smash Burguers",
-      description: "Sector Floresta",
-      latitude: -0.20360336688719613,
-      longitude: -78.48144881846252,
-    },
-  ];
+  useEffect(() => {
+    // Conectar a Firebase para obtener los lugares
+    const fetchPlaces = async () => {
+      try {
+        const db = getDatabase();
+        const placesRef = ref(db, "places");
 
-  // Obtener la ubicación actual del usuario
+        onValue(placesRef, (snapshot) => {
+          if (snapshot.exists()) {
+            const data = snapshot.val();
+            const loadedPlaces = Object.keys(data).map((key) => ({
+              id: key,
+              ...data[key],
+            }));
+            setPlaces(loadedPlaces);
+          } else {
+            setPlaces([]);
+            Alert.alert("Aviso", "No hay lugares guardados.");
+          }
+        });
+      } catch (error) {
+        console.error("Error al obtener los lugares:", error);
+        Alert.alert("Error", "No se pudieron cargar los lugares.");
+      }
+    };
+
+    fetchPlaces();
+  }, []);
+
   const toggleUserLocation = async () => {
-    if (userLocation) {
-      // Si ya está activada la ubicación, desactivarla
+    if (isLocationActive) {
+      // Desactivar ubicación
       setUserLocation(null);
+      setIsLocationActive(false);
       Alert.alert("Ubicación desactivada", "Ya no se mostrarán rutas.");
     } else {
-      // Si no está activada, activarla
+      // Activar ubicación
       try {
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== "granted") {
           Alert.alert(
             "Permiso denegado",
-            "Se requiere acceso a tu ubicación para calcular las rutas."
+            "Se requiere acceso a tu ubicación para calcular rutas."
           );
           return;
         }
 
         const location = await Location.getCurrentPositionAsync({});
-        setUserLocation({
-          latitude: location.coords.latitude,
-          longitude: location.coords.longitude,
-        });
-
+        const { latitude, longitude } = location.coords;
+        setUserLocation({ latitude, longitude });
+        setIsLocationActive(true);
         Alert.alert("Ubicación activada", "Tu ubicación se ha activado.");
       } catch (error) {
         console.error("Error al obtener la ubicación:", error);
-        Alert.alert("Error", "No se pudo obtener tu ubicación.");
+        Alert.alert("Error", "No se pudo activar tu ubicación.");
       }
     }
   };
@@ -109,18 +108,16 @@ const PlacesScreen: React.FC = () => {
               longitudeDelta: 0.05,
             }}
           >
-            {/* Muestra el marcador del lugar seleccionado */}
             <Marker
               coordinate={{
                 latitude: selectedPlace.latitude,
                 longitude: selectedPlace.longitude,
               }}
-              title={selectedPlace.title}
+              title={selectedPlace.name}
               description={selectedPlace.description}
             />
-
-            {/* Si el usuario ya activó su ubicación, muestra la ruta */}
-            {userLocation && (
+            {/* Mostrar ruta si la ubicación del usuario está activa */}
+            {isLocationActive && userLocation && (
               <>
                 <Marker
                   coordinate={{
@@ -146,7 +143,6 @@ const PlacesScreen: React.FC = () => {
               </>
             )}
           </MapView>
-
           <TouchableOpacity
             style={styles.backButton}
             onPress={() => setSelectedPlace(null)}
@@ -164,7 +160,7 @@ const PlacesScreen: React.FC = () => {
                 style={styles.placeItem}
                 onPress={() => setSelectedPlace(item)}
               >
-                <Text style={styles.placeTitle}>{item.title}</Text>
+                <Text style={styles.placeTitle}>{item.name}</Text>
                 <Text style={styles.placeDescription}>{item.description}</Text>
               </TouchableOpacity>
             )}
@@ -172,12 +168,14 @@ const PlacesScreen: React.FC = () => {
           <TouchableOpacity
             style={[
               styles.locationButton,
-              userLocation ? styles.locationButtonActive : styles.locationButtonInactive,
+              isLocationActive
+                ? styles.locationButtonActive
+                : styles.locationButtonInactive,
             ]}
             onPress={toggleUserLocation}
           >
             <Text style={styles.locationButtonText}>
-              {userLocation ? "Desactivar mi ubicación" : "Activar mi ubicación"}
+              {isLocationActive ? "Desactivar mi ubicación" : "Activar mi ubicación"}
             </Text>
           </TouchableOpacity>
         </>
@@ -197,8 +195,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   map: {
-    width: Dimensions.get("window").width,
-    height: Dimensions.get("window").height - 100,
+    width: "100%",
+    height: "100%",
   },
   placeItem: {
     padding: 15,
